@@ -1,0 +1,406 @@
+#!/usr/bin/R
+
+##############################################################################
+#
+# MODULE:       r.slope.stability.map.R
+#
+# AUTHOR:       Martin Mergili
+#
+# PURPOSE:      The slope stability model - R script for the preparation
+#               of maps visualizing the model results
+#
+# COPYRIGHT:    (c) 2013 - 2021 by the author
+#               (c) 2020 - 2021 by the University of Graz
+#               (c) 2013 - 2021 by the BOKU University, Vienna
+#               (c) 2015 - 2020 by the University of Vienna
+#               (C) 1993 - 2021 by the R Development Core Team
+#
+# VERSION:      20210525 (25 May 2021)
+#
+#               This program is free software under the GNU General Public
+#               License (>=v2).
+#
+##############################################################################
+
+
+# Loading libraries
+library(sp)
+library(rgdal)
+library(raster)
+
+# Importing arguments defined in r.slope.stability.py
+args <- commandArgs(trailingOnly = TRUE)
+temppath <- args[1]
+prefix <- args[2]
+yrmax <- as.numeric(args[3])
+yrmin <- as.numeric(args[4])
+xrmin <- as.numeric(args[5])
+xrmax <- as.numeric(args[6])
+csz <- as.numeric(args[7])
+map <- as.character(args[8])
+lev0 <- as.numeric(args[9])
+lev1 <- as.numeric(args[10])
+lev2 <- as.numeric(args[11])
+lev3 <- as.numeric(args[12])
+lev4 <- as.numeric(args[13])
+lev5 <- as.numeric(args[14])
+lev6 <- as.numeric(args[15])
+numplot <- as.integer(args[16])
+typeext <- as.integer(args[17])
+maxlab <- as.numeric(args[18])
+colctrl <- as.integer(args[19])
+obsctrl <- as.integer(args[20])
+pflag <- as.integer(args[21])
+
+if (lev0 != lev6) {
+
+    # Defining titles of maps, color scheme for layers and custom threshold levels
+    # for legend
+    if (map == "depth") {
+        titlong <- "Failure depth"
+        titshort <- substitute(expression(~~~~~~~~~~~italic(d)[crit] ~ (m)))
+        col1 <- rgb(0.5, 0.5, 1, 0.25)
+        col2 <- rgb(0.4, 0.5, 0.8, 0.4)
+        col3 <- rgb(0.3, 0.5, 0.7, 0.55)
+        col4 <- rgb(0.2, 0.5, 0.4, 0.7)
+        col5 <- rgb(0.1, 0.4, 0.2, 0.85)
+        col6 <- rgb(0, 0, 0, 1)
+    } else if (map == "dnewmark") {
+        if (pflag == 0) {
+            titlong <- "Newmark displacement"
+            titshort <- substitute(expression(~~~~~~~~~~~italic(D)[n] ~ (cm)))
+        } else {
+            titlong <- "Mean value of Newmark displacement"
+            titshort <- substitute(expression(~~~~~~~~~~~italic(mu)[Dn] ~ (cm)))
+        }
+        col1 <- rgb(0.5, 0.5, 1, 0.25)
+        col2 <- rgb(0.4, 0.5, 0.8, 0.4)
+        col3 <- rgb(0.3, 0.5, 0.7, 0.55)
+        col4 <- rgb(0.2, 0.5, 0.4, 0.7)
+        col5 <- rgb(0.1, 0.4, 0.2, 0.85)
+        col6 <- rgb(0, 0, 0, 1)
+    } else if (map == "fos") {
+        if (pflag == 0) {
+            titlong <- "Factor of safety"
+            titshort <- "       FoS"
+        } else {
+            titlong <- "Mean value of factor of safety"
+            titshort <- substitute(expression(~~~~~~~~~~~italic(mu)[FoS]))
+        }
+        lev0 <- 0.5
+        lev1 <- 0.75
+        lev2 <- 1
+        lev3 <- 1.3
+        lev4 <- 1.6
+        lev5 <- 2
+        lev6 <- 2.5
+        col1 <- rgb(0, 0, 0, 1)
+        col2 <- rgb(0.4, 0, 0.4, 0.8)
+        col3 <- rgb(0.1, 0.1, 0.8, 0.6)
+        col4 <- rgb(0.2, 0.5, 0.8, 0.4)
+        col5 <- rgb(1, 1, 0, 0.2)
+        col6 <- rgb(1, 1, 1, 0)
+    } else if (map == "fos_stdev") {
+        titlong <- "Standard deviation of factor of safety"
+        titshort <- substitute(expression(~~~~~~~~~~~italic(sigma)[FoS]))
+        lev0 <- 0
+        lev1 <- 0.25
+        lev2 <- 0.5
+        lev3 <- 0.75
+        lev4 <- 1
+        lev5 <- 1.5
+        lev6 <- 2.5
+        col1 <- rgb(0, 1, 0.2, 0)
+        col2 <- rgb(0.2, 0.8, 0.2, 0.2)
+        col3 <- rgb(0.4, 0.6, 0.2, 0.4)
+        col4 <- rgb(0.6, 0.4, 0.2, 0.6)
+        col5 <- rgb(0.8, 0.2, 0.2, 0.8)
+        col6 <- rgb(1, 0, 0.2, 1)
+    } else if (map == "dnewmark_stdev") {
+        titlong <- "Standard deviation of Newmark displacement"
+        titshort <- substitute(expression(~~~~~~~~~~~italic(sigma)[Dn] ~ (cm)))
+        col1 <- rgb(0, 1, 0.2, 0)
+        col2 <- rgb(0.2, 0.8, 0.2, 0.2)
+        col3 <- rgb(0.4, 0.6, 0.2, 0.4)
+        col4 <- rgb(0.6, 0.4, 0.2, 0.6)
+        col5 <- rgb(0.8, 0.2, 0.2, 0.8)
+        col6 <- rgb(1, 0, 0.2, 1)
+    } else if (map == "pfail") {
+        titlong <- "Slope failure probability"
+        titshort <- substitute(expression(~~~~~~~~~~~italic(P)[f]))
+        lev0 <- 0
+        lev1 <- 0.1
+        lev2 <- 0.2
+        lev3 <- 0.4
+        lev4 <- 0.6
+        lev5 <- 0.8
+        lev6 <- 1
+        col1 <- rgb(0.3, 0.7, 1, 0.25)
+        col2 <- rgb(0.2, 0.7, 0.6, 0.4)
+        col3 <- rgb(0.2, 0.6, 0.2, 0.55)
+        col4 <- rgb(0.4, 0.4, 0.2, 0.7)
+        col5 <- rgb(0.3, 0.1, 0.1, 0.85)
+        col6 <- rgb(0, 0, 0, 1)
+    } else if (map == "sindex") {
+        titlong <- "Fraction of ellipsoids with FoS < 1"
+        titshort <- substitute(expression(~~~~~~~~~~~italic(f)[FoS < 1]))
+        lev0 <- 0
+        lev1 <- 0.1
+        lev2 <- 0.2
+        lev3 <- 0.3
+        lev4 <- 0.4
+        lev5 <- 0.5
+        lev6 <- 1
+        col1 <- rgb(0.3, 0.7, 1, 0.25)
+        col2 <- rgb(0.2, 0.7, 0.6, 0.4)
+        col3 <- rgb(0.2, 0.6, 0.2, 0.55)
+        col4 <- rgb(0.4, 0.4, 0.2, 0.7)
+        col5 <- rgb(0.3, 0.1, 0.1, 0.85)
+        col6 <- rgb(0, 0, 0, 1)
+    } else if (map == "lcrit") {
+        titlong <- "Critical slip surface length"
+        titshort <- substitute(expression(~~~~~~~~~~~italic(l)[crit] ~ (m)))
+        col1 <- rgb(0.6, 1, 0.6, 0.25)
+        col2 <- rgb(0.5, 0.8, 0.3, 0.4)
+        col3 <- rgb(0.5, 0.4, 0.2, 0.55)
+        col4 <- rgb(0.6, 0.3, 0, 0.7)
+        col5 <- rgb(0.4, 0.1, 0, 0.85)
+        col6 <- rgb(0, 0, 0, 1)
+    } else if (map == "wcrit") {
+        titlong <- "Critical slip surface width"
+        titshort <- substitute(expression(~~~~~~~~~~~italic(w)[crit] ~ (m)))
+        col1 <- rgb(0.6, 1, 0.6, 0.25)
+        col2 <- rgb(0.5, 0.8, 0.3, 0.4)
+        col3 <- rgb(0.5, 0.4, 0.2, 0.55)
+        col4 <- rgb(0.6, 0.3, 0, 0.7)
+        col5 <- rgb(0.4, 0.1, 0, 0.85)
+        col6 <- rgb(0, 0, 0, 1)
+    } else if (map == "zbcrit") {
+        titlong <- "Critical offset ratio of centre"
+        titshort <- substitute(expression(~~~~~~~~~~~italic(z)[b, crit]))
+        col1 <- rgb(0.6, 1, 0.6, 0.25)
+        col2 <- rgb(0.5, 0.8, 0.3, 0.4)
+        col3 <- rgb(0.5, 0.4, 0.2, 0.55)
+        col4 <- rgb(0.6, 0.3, 0, 0.7)
+        col5 <- rgb(0.4, 0.1, 0, 0.85)
+        col6 <- rgb(0, 0, 0, 1)
+    } else if (map == "layer") {
+        titlong <- "Critical layer"
+        titshort <- substitute(expression(~~~~~~~~~~~italic(l)[crit]))
+    }
+
+    # Defining precision of legend labels
+    if (map == "layer") {
+        rd <- 0
+    } else {
+        rd <- 2
+    }
+
+    # Defining legend labels
+    lab0 <- format(round(lev0, rd), nsmall = rd)
+    lab1 <- format(round(lev1, rd), nsmall = rd)
+    lab2 <- format(round(lev2, rd), nsmall = rd)
+    lab3 <- format(round(lev3, rd), nsmall = rd)
+    lab4 <- format(round(lev4, rd), nsmall = rd)
+    lab5 <- format(round(lev5, rd), nsmall = rd)
+    lab6 <- format(round(lev6, rd), nsmall = rd)
+    if (map == "depth") {
+        if (maxlab > lev6) 
+            lab6 <- format(round(maxlab, rd), nsmall = rd)
+    } else if (map == "fos") {
+        lab0 <- "0.00"
+        lab6 <- "INF"
+    } else if (map == "dnewmark") {
+        lab6 <- "INF"
+    } else if (map == "dnewmark_stdev") {
+        lab6 <- "INF"
+    }
+
+    # Computing x and y extent of raster layers
+    xdiff <- xrmax - xrmin
+    ydiff <- yrmax - yrmin
+
+    # Adapting boundaries for vector layers
+    xsmin <- xrmin + 0.035 * xdiff
+    xsmax <- xrmax - 0.035 * xdiff
+    ysmin <- yrmin + 0.035 * ydiff
+    ysmax <- yrmax - 0.035 * ydiff
+
+    # Layouting map
+    asprat <- xdiff/(1.4 * ydiff)
+    margx <- 6
+    margy <- 2.5
+    dispx <- 15
+    dispy <- (15 - margx)/asprat + margy
+
+    # Defining names of raster maps
+    layermap <- paste(prefix, "_results/", prefix, "_tiffs/", prefix, "_", map, ".tif", 
+        sep = "")
+    hillshmap <- paste(temppath, "/hillshade.tif", sep = "")
+
+    # Importing raster maps
+    layer <- raster(layermap)
+    hillshade <- raster(hillshmap)
+
+    # Importing vector maps
+    if (obsctrl == 1) {
+        observedshape <- readOGR(temppath, layer = "d_lobserved")
+        confirmationshape <- readOGR(temppath, layer = "d_confirmation")
+    }
+
+    # Adapting vector maps
+    if (map == "depth") {
+        layer[layer == 0] <- NA
+        layer[layer > lev6] <- lev6
+    } else if (map == "dnewmark") {
+        layer[layer == 0] <- NA
+        layer[layer > lev6] <- lev6
+    } else if (map == "fos") {
+        layer[layer == 9999] <- NA
+        layer[layer < 0.5] <- 0.5
+        layer[layer > 2.5] <- 2.5
+    } else if (map == "fos_stdev") {
+        layer[layer == 9999] <- NA
+        layer[layer > 2.5] <- 2.5
+    } else if (map == "pfail") {
+        layer[layer == -9999] <- NA
+        layer[layer == 0] <- NA
+    } else if (map == "sindex") {
+        layer[layer == 0] <- NA
+    }
+    layer[layer > lev6] <- NA
+    layer[layer < lev0] <- NA
+
+    # Creating plot file
+    if (typeext == 0) {
+        if (colctrl == 1) {
+            mapplot <- paste(prefix, "_results/", prefix, "_hmaps/", prefix, "_map_", 
+                map, ".png", sep = "")
+        } else {
+            mapplot <- paste(prefix, "_results/", prefix, "_maps/", prefix, "_map_", 
+                map, ".png", sep = "")
+        }
+    } else {
+        if (colctrl == 1) {
+            mapplot <- paste(prefix, "_results/", prefix, "_hmaps/", prefix, "_dmap_", 
+                map, ".png", sep = "")
+        } else {
+            mapplot <- paste(prefix, "_results/", prefix, "_maps/", prefix, "_dmap_", 
+                map, ".png", sep = "")
+        }
+    }
+    png(filename = mapplot, width = dispx, height = dispy, units = "cm", res = 300)
+
+    # Defining margins
+    par(mar = c(2, 2, 0.5, 1))
+
+    # Plotting hillshade
+    if (colctrl == 1) {
+        plot(hillshade, alpha = 0.5, legend.width = 1, col = gray((0:255)/255), legend = FALSE, 
+            axes = FALSE, box = FALSE, xlab = NA, ylab = NA, xlim = c(xrmin, xrmax), 
+            ylim = c(yrmin, yrmax), useRaster = TRUE)
+        par(new = TRUE)
+    }
+
+    # Plotting layer
+    if (map == "layer") {
+        plot(layer, legend.width = 1, alpha = 0.6, col = terrain.colors(lev6), useRaster = TRUE, 
+            xlim = c(xrmin, xrmax), ylim = c(yrmin, yrmax), axes = FALSE, xlab = NA, 
+            ylab = NA, box = FALSE, legend.args = list(text = titshort, side = 3, 
+                line = 1))
+    } else {
+        plot(layer, legend.width = 1, useRaster = TRUE, col = c(col1, col2, col3, 
+            col4, col5, col6), breaks = c(lev0, lev1, lev2, lev3, lev4, lev5, lev6), 
+            xlim = c(xrmin, xrmax), ylim = c(yrmin, yrmax), axes = FALSE, xlab = NA, 
+            ylab = NA, box = FALSE, legend.args = list(text = titshort, side = 3, 
+                line = 1), axis.args = list(labels = c(lab0, lab1, lab2, lab3, lab4, 
+                lab5, lab6)))
+    }
+
+    # Plotting vectors
+    if (obsctrl == 1) {
+        par(new = TRUE)
+        if (typeext == 0) {
+            plot(observedshape, bg = "transparent", col = "red", lty = 1, lwd = 0.5, 
+                xlim = c(xsmin, xsmax), ylim = c(ysmin, ysmax), axes = FALSE, xlab = NA, 
+                ylab = NA)
+            par(new = TRUE)
+            plot(confirmationshape, bg = "transparent", col = "black", lty = 5, lwd = 1, 
+                xlim = c(xsmin, xsmax), ylim = c(ysmin, ysmax), axes = FALSE, xlab = NA, 
+                ylab = NA)
+        } else {
+            plot(observedshape, bg = "transparent", col = "red", lty = 1, lwd = 2, 
+                xlim = c(xsmin, xsmax), ylim = c(ysmin, ysmax), axes = FALSE, xlab = NA, 
+                ylab = NA)
+        }
+    }
+
+    # Plotting rectangle for text and legend
+    rect(xrmin - xdiff/2, yrmax, xrmax + xdiff/2, yrmax + ydiff/2, col = "white", 
+        lty = 0)
+    rect(xrmin - xdiff/2, yrmin - xdiff/2, xrmax + xdiff/2, yrmin, col = "white", 
+        lty = 0)
+
+    # Plotting title
+    text(x = xsmin + xdiff/2, y = ysmax + ydiff/12.5, labels = titlong, cex = 1.25, 
+        col = "black", font = 2)  #title
+
+    # Computing locations and labels of tick marks
+    xaxlbs <- vector()  #initializing vector for x axis tick mark positions and labels
+    yaxlbs <- vector()  #initializing vector for y axis tick mark positions and labels
+
+    ldiff <- 100 * round(xdiff/600, digits = 0)  #distance between tick marks
+    xlmin <- 100 * round((xsmin + ldiff/2)/100, digits = 0)  #position of first tick mark on x axis
+    ylmin <- 100 * round((ysmin + ldiff/2)/100, digits = 0)  #position of first tick mark on y axis
+
+    if (ldiff == 0) {
+        # distance was set too large
+        ldiff <- 10 * round(xdiff/60, digits = 0)  #distance between tick marks
+        xlmin <- 10 * round((xsmin + ldiff/2)/10, digits = 0)  #position of first tick mark on x axis
+        ylmin <- 10 * round((ysmin + ldiff/2)/10, digits = 0)  #position of first tick mark on y axis
+    }
+
+    j <- 1  #initializing counter for loop over all x axis ticks and labels
+    repeat {
+        # starting loop
+        if (xlmin + (j - 1) * ldiff > xsmin) 
+            xaxlbs[j] <- xlmin + (j - 1) * ldiff  #tick mark position
+        if (xlmin + (j - 1) * ldiff > xsmax - ldiff) 
+            break  #break if last label was reached
+        j <- j + 1
+    }
+    j <- 1  #initializing counter for loop over all y axis ticks and labels
+    repeat {
+        # starting loop
+        if (ylmin + (j - 1) * ldiff > ysmin) 
+            yaxlbs[j] <- ylmin + (j - 1) * ldiff  #tick mark position
+        if (ylmin + (j - 1) * ldiff > ysmax - ldiff) 
+            break  #break if last label was reached
+        j <- j + 1
+    }
+
+    # Plotting bounding box and axes
+    box()
+    par(cex = 0.65)
+    axis(side = 1, tck = -0.01, labels = NA, at = xaxlbs)
+    axis(side = 2, tck = -0.01, labels = NA, at = yaxlbs)
+    axis(side = 1, lwd = 0, line = -0.6, at = xaxlbs)
+    axis(side = 2, lwd = 0, line = -0.6, at = yaxlbs)
+
+    # Plotting legend
+    if (obsctrl == 1) {
+        par(cex = 1)
+        if (typeext == 0) {
+            legend("bottomleft", lty = c(1, 5), lwd = c(0.5, 1), col = c("red", "black"), 
+                legend = c("observed landslide areas", "confirmation area"), text.col = "black", 
+                bty = "n", horiz = TRUE, x.intersp = 0.25, inset = c(0.035, 0.01))
+        } else {
+            legend("bottomleft", lty = 1, lwd = 2, col = "red", legend = "observed landslide areas", 
+                text.col = "black", bty = "n", horiz = TRUE, x.intersp = 0.25, inset = c(0.25, 
+                  0.01))
+        }
+    }
+
+    # Closing plot file
+    dev.off()
+}
