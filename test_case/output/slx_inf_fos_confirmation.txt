@@ -1,0 +1,13 @@
+Criterion	Shortcut	Value
+Rate of positive observations	rOP	9.4%
+Rate of negative observations	rON	90.6%
+True positive rate	rTP	2.3%
+True negative rate	rTN	47.0%
+False positive rate	rFP	43.6%
+False negative rate	rFN	7.1%
+True positive rate out of all positive observations	rTP/rOP	24.3%
+True negative rate out of all negative observations	rTN/rON	51.9%
+Rate of total positive predictions	rMP	45.9%
+Rate of total negative predictions	rMN	54.1%
+Rate of true predictions	rT	49.3%
+Rate of false predictions	rF	50.7%
