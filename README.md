@@ -55,14 +55,6 @@ The `-m` (multi-core) flag's automatic tile-splitting and recombination does not
 bash install.sh
 ```
 
-then, from inside a GRASS session opened on the Slideslope location:.slope.stability -t -v prefix=so_sing_class cellsize=1 model=c elevation=dem 
-
-soilclass=lithology gwdepth=gwdepth seepage=1 numlayers=5 
-
-depthmaps=depth1,depth2,depth3,depth4,depth5 
-
-geotech=1,1,15000,4000,30,40,1,2,15000,2000,20,35,1,3,15000,2500,40,40,1,4,15000,5000,30,40,1,5,27000,100000,89,0 
-
-elldens=0 ellips=100,100,50,50,25,25,0,0,3,1,100,100,-9999,-9999
+then, from inside a GRASS session opened on the Slideslope location:r.slope.stability -t -v prefix=so_sing_class cellsize=1 model=c elevation=dem soilclass=lithology gwdepth=gwdepth seepage=1 numlayers=5 depthmaps=depth1,depth2,depth3,depth4,depth5 geotech=1,1,15000,4000,30,40,1,2,15000,2000,20,35,1,3,15000,2500,40,40,1,4,15000,5000,30,40,1,5,27000,100000,89,0 elldens=0 ellips=100,100,50,50,25,25,0,0,3,1,100,100,-9999,-9999
 
 A successful run prints `Number of valid ellipsoids: 1 out of 1.` and a Factor of Safety around 0.84 — confirming the install before moving on to the larger Slideland examples.
