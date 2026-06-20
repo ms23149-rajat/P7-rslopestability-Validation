@@ -1,0 +1,45 @@
+a	1
+d	0
+m	0
+p	1
+s	0
+t	1
+cellsize	30
+admN	NA
+admS	NA
+admW	NA
+admE	NA
+model	c
+elldens	100
+observed	observed_ss
+elevation	dem
+pseudostatic	0
+newmark	0
+newmarkcoef	NA
+newmarkref	NA
+arias	NA
+soilclass	soilclass
+gwdepth	NA
+slopeunits	NA
+dxl	NA
+dyl	NA
+numlayers	['2', '2', '2', '2']
+depthmaps	['depth1', 'depth2']
+depthvals	NA
+prelayers	NA
+classlayers	NA
+maxlayers	-9999
+geotech	['1', '1', '18000', '15000', '32', '42', '4000', '5000', '25000', '4', '24', '40', '1', '2', '27000', '97500', '88', '0', '1', '95000', '100000', '1', '87', '89', '2', '1', '18000', '10000', '30', '38', '3000', '3000', '17000', '4', '22', '38', '2', '2', '27000', '97500', '88', '0', '1', '95000', '100000', '1', '87', '89', '3', '1', '18000', '8000', '28', '35', '2500', '2000', '14000', '4', '20', '36', '3', '2', '27000', '97500', '88', '0', '1', '95000', '100000', '1', '87', '89', '4', '1', '18000', '99000', '89', '50', '1', '98000', '100000', '1', '88', '89', '4', '2', '27000', '97500', '88', '0', '1', '95000', '100000', '1', '87', '89']
+seepage	1
+ellips	100,20,30,8,3,1,0.5,0.0,3,1,-9999,-9999,-9999,-9999
+sampling	['2', '3', '3', '0', '1', '1', '1']
+regpar	-583,21711
+segsize	16
+nsegs	16
+tilesx	NA
+tilesy	NA
+overlap	300
+ncores	8
+number of layers	2
+number of valid tiles	0
+maximum y value of evolution plot	0.10606
