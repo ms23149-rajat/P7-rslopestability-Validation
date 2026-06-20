@@ -1,5 +1,4 @@
-cd ~/P7-rslopestability-Validation
-cat > install.sh << 'INSTALLSH_FULL_EOF'
+
 #!/bin/bash
 #
 # install.sh -- P-7 (r.slope.stability) setup on the SURGE 2026 lab workstation
@@ -77,12 +76,6 @@ fi
 
 echo "== 4. Patching known GRASS 7 -> GRASS 8 incompatibilities (see notes.md) =="
 
-# Issue 2: -text -> --text
-sed -i 's/-text/--text/g' "$ADDON_SCRIPT"
-
-# Issue 4: scriptpath2 hardcoded to .grass7/addons/scripts
-sed -i 's#\.grass7/addons/scripts#\.grass8/addons/scripts#g' "$ADDON_SCRIPT"
-
 # Issue 1: bingrass fallback
 python3 - "$ADDON_SCRIPT" <<'PYEOF'
 import sys, pathlib
@@ -103,6 +96,9 @@ else:
     print("WARNING: bingrass pattern not found -- addon version may differ; check manually.")
 PYEOF
 
+# Issue 2: -text -> --text
+sed -i 's/-text/--text/g' "$ADDON_SCRIPT"
+
 # Issue 3: library(rgdal) -- retired from CRAN, comment out (stopgap; see notes.md caveat)
 RCODE_DIR="$HOME/.grass7/addons/etc/r.slope.stability.rcode"
 if [ -d "$RCODE_DIR" ]; then
@@ -113,6 +109,9 @@ else
     echo "  grep -n 'scriptpath = ' $ADDON_SCRIPT"
     echo "and comment out 'library(rgdal)' in r.slope.stability.map.R and r.slope.stability.roc.R there."
 fi
+
+# Issue 4: scriptpath2 hardcoded to .grass7/addons/scripts
+sed -i 's#\.grass7/addons/scripts#\.grass8/addons/scripts#g' "$ADDON_SCRIPT"
 
 echo "== 5. Personal R library + packages =="
 mkdir -p "$HOME/R/library"
@@ -140,5 +139,3 @@ echo "Smoke test:"
 echo "  grass $WORKDIR/slideslope/PERMANENT"
 echo "  r.slope.stability --help"
 echo "See README.md for the validated example commands."
-INSTALLSH_FULL_EOF
-chmod +x install.sh
