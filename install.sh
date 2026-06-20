@@ -1,3 +1,5 @@
+cd ~/P7-rslopestability-Validation
+cat > install.sh << 'INSTALLSH_FULL_EOF'
 #!/bin/bash
 #
 # install.sh -- P-7 (r.slope.stability) setup on the SURGE 2026 lab workstation
@@ -20,7 +22,47 @@ fi
 rm -rf r_slope_stability
 unzip -q "$SRC_ZIP" -d r_slope_stability
 
-echo "== 2. Compiling and installing via g.extension =="
+echo "== 2. Patching ellipsoid-sampling randmax=0 vulnerability (see notes.md, issue 8) =="
+MAIN_C="$WORKDIR/r_slope_stability/r.slope.stability/r.slope.stability.main/main.c"
+if [ -f "$MAIN_C" ]; then
+    cp "$MAIN_C" "$MAIN_C.bak"
+    python3 - "$MAIN_C" <<'PYEOF'
+import sys, re
+
+path = sys.argv[1]
+with open(path) as f:
+    text = f.read()
+
+pattern = re.compile(
+    r'if \( (\w+) > (\w+) \) \{\s*'
+    r'randmax = \( int \) \( 1000 \* \( \1 - \2 \) \+ 0\.5 \);\s*'
+    r'([\w_]+) = [^;]+;\s*'
+    r'\}\s*'
+    r'else \3 = \1;'
+)
+
+def replacer(m):
+    maxvar, minvar, var = m.group(1), m.group(2), m.group(3)
+    return (
+        f'if ( {maxvar} > {minvar} ) {{\n'
+        f'                randmax = ( int ) ( 1000 * ( {maxvar} - {minvar} ) + 0.5 );\n'
+        f'                if ( randmax > 0 ) {var} = ( ( float ) ( ( rand()%randmax ) ) ) / 1000 + {minvar};\n'
+        f'                else {var} = {minvar};\n'
+        f'            }}\n'
+        f'            else {var} = {maxvar};'
+    )
+
+new_text, n = pattern.subn(replacer, text)
+print(f"Patched {n} ellipsoid-sampling randmax=0 vulnerabilities (expect 3: zb, length, width)")
+
+with open(path, 'w') as f:
+    f.write(new_text)
+PYEOF
+else
+    echo "WARNING: $MAIN_C not found -- skipping ellipsoid-sampling patch. Apply manually per notes.md issue 8 if needed."
+fi
+
+echo "== 3. Compiling and installing via g.extension =="
 # --exec runs non-interactively and sidesteps the GRASS_BATCH_JOB issue (see notes.md, issue 5)
 grass --tmp-location EPSG:4326 --exec g.extension \
     extension=r.slope.stability \
@@ -33,7 +75,7 @@ if [ ! -f "$ADDON_SCRIPT" ]; then
     exit 1
 fi
 
-echo "== 3. Patching known GRASS 7 -> GRASS 8 incompatibilities (see notes.md) =="
+echo "== 4. Patching known GRASS 7 -> GRASS 8 incompatibilities (see notes.md) =="
 
 # Issue 2: -text -> --text
 sed -i 's/-text/--text/g' "$ADDON_SCRIPT"
@@ -72,16 +114,16 @@ else
     echo "and comment out 'library(rgdal)' in r.slope.stability.map.R and r.slope.stability.roc.R there."
 fi
 
-echo "== 4. Personal R library + packages =="
+echo "== 5. Personal R library + packages =="
 mkdir -p "$HOME/R/library"
 grep -qxF 'R_LIBS_USER=~/R/library' "$HOME/.Renviron" 2>/dev/null || \
     echo 'R_LIBS_USER=~/R/library' >> "$HOME/.Renviron"
 
 Rscript -e 'install.packages(c("sp","Rcpp","fmsb","ROCR","raster"), repos="https://cloud.r-project.org")'
 # NOTE: rgdal, rgeos, maptools (listed in the official manual) are retired from CRAN
-# and cannot be installed any more -- step 3 above patches around them instead.
+# and cannot be installed any more -- step 4 above patches around them instead.
 
-echo "== 5. Downloading official test datasets =="
+echo "== 6. Downloading official test datasets =="
 for f in slideslope.zip slideland.zip; do
     if [ ! -f "$f" ]; then
         echo "Downloading $f ..."
@@ -98,3 +140,5 @@ echo "Smoke test:"
 echo "  grass $WORKDIR/slideslope/PERMANENT"
 echo "  r.slope.stability --help"
 echo "See README.md for the validated example commands."
+INSTALLSH_FULL_EOF
+chmod +x install.sh
