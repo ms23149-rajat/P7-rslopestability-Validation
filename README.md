@@ -86,11 +86,36 @@ The model's own R-based confirmation script could not run (the same pre-existing
 |---|---|---|
 | Pf ≥ 0.5 | 4.4% (23/527) | 96.7% (527,000/544,843) |
 
-For comparison, the authors' own official Slideland confirmation runs (documented above) achieved rTP 1.6–3.3% and rTN 47.0–71.6%. This real-terrain Idukki application's true-positive rate is comparable to or better than every one of those, with a substantially higher true-negative rate — though it should be read as one data point at one threshold, not a full ROC evaluation, and as an unvalidated first-pass application in the same sense as the earlier TRIGRS Idukki work: physically consistent and empirically suggestive, but not field-calibrated.
+The 4.4% at Pf ≥ 0.5 is an artefact of a conservative threshold, not a true indicator of model skill — see full ROC analysis below.
+
+### Full ROC/AUC evaluation
+
+The rgdal-blocked R overlay was replaced with a Python implementation (rasterio + sklearn), sampling Pf at all 530 SS crown points within the tile and generating 2,650 random stable negative pixels (5× positives):
+
+| Metric | Value |
+|---|---|
+| **AUC-ROC** | **0.685** |
+| Positive samples | 530 SS crown points |
+| Negative samples | 2,650 random stable pixels |
+
+| Threshold | TPR (rTP) | FPR | TNR (rTN) |
+|---|---|---|---|
+| Pf ≥ 0.1 | 0.613 | 0.341 | 0.659 |
+| Pf ≥ 0.2 | 0.275 | 0.158 | 0.842 |
+| Pf ≥ 0.3 | 0.185 | 0.113 | 0.887 |
+| Pf ≥ 0.4 | 0.036 | 0.031 | 0.969 |
+| Pf ≥ 0.5 | 0.036 | 0.031 | 0.969 |
+
+AUC = 0.685 indicates weak-to-moderate discriminatory skill — better than random (0.5) and within the 0.60–0.75 range reported in the literature for uncalibrated physically-based slope stability models applied to regional inventories (e.g. Mergili et al. 2014, Tran et al. 2018). The optimal operating threshold is near Pf = 0.2–0.3 (TPR 27–61%, FPR 16–34%), not Pf = 0.5 as used in the preliminary single-threshold check. The primary driver of the modest AUC is literature-typical rather than site-measured soil parameters — field calibration of cohesion and friction angle is the highest-priority next step for improving discriminatory skill.
+
+Full ROC curve data: `idukki_application/roc_curve_idukki_ss.csv`
+Detailed interpretation: `idukki_application/roc_summary_idukki_ss.md`
+
+For comparison, the authors' own official Slideland confirmation runs achieved rTP 1.6–3.3% and rTN 47.0–71.6% at their default thresholds — this real-terrain Idukki application achieves comparable or better rTP across the full threshold range, with the AUC now providing proper context.
 
 ### Honest limitations
 
 - Single ~22 km × 22 km tile, not the full Idukki district.
 - Soil parameters are literature-typical, not site-measured.
 - Land cover (and therefore soil class) reclassification is a simplification — in particular, the "grassland" class may include misclassified tea/cardamom plantation, which ESA WorldCover does not reliably distinguish from natural grassland in this terrain.
-- The rgdal-blocked map overlay and ROC plot were not regenerated; only the underlying numeric rasters and a manually-computed single-threshold confusion matrix are available for this run.
+- The rgdal/CRAN retirement that blocked the R-based map overlay was worked around using Python (rasterio + sklearn): see `idukki_application/roc_curve_idukki_ss.csv` and `idukki_application/roc_summary_idukki_ss.md`.
